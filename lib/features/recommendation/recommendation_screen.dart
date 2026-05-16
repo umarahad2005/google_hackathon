@@ -252,11 +252,12 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
   Widget _buildReasoningCard() {
     final result = widget.result['result'];
-    final reasoning = result is Map ? result['recommended']?['reasoning'] : null;
+    // Split null-aware index out of ternary to avoid Dart parser ambiguity
+    final Map? recommended = result is Map ? result['recommended'] as Map? : null;
+    final reasoning = recommended?['reasoning'];
     // Also check for booking reasoning
-    final bookingReasoning = result is Map
-        ? result['booking']?['reasoning']
-        : null;
+    final Map? bookingMap = result is Map ? result['booking'] as Map? : null;
+    final bookingReasoning = bookingMap?['reasoning'];
 
     return Container(
       width: double.infinity,
