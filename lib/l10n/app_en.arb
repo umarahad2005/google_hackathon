@@ -1,0 +1,23 @@
+{
+  "@@locale": "en",
+  "appTitle": "Zimma AI",
+  "requestScreenTitle": "What service do you need?",
+  "requestHint": "Describe what you need...",
+  "requestExampleUrdu": "مجھے کل صبح G-13 میں AC ٹیکنیشن چاہیے",
+  "requestExampleRomanUrdu": "Mujhe kal subah G-13 mein AC technician chahiye",
+  "requestExampleEnglish": "I need a plumber in F-8 tomorrow morning",
+  "send": "Send",
+  "traceTitle": "AI is thinking...",
+  "traceComplete": "Analysis Complete",
+  "recommendationTitle": "Recommended for you",
+  "whyThisOne": "Why this provider?",
+  "bookNow": "Book Now",
+  "bookingConfirmed": "Booking Confirmed!",
+  "viewReceipt": "View Receipt",
+  "followUpTitle": "Service Status",
+  "statusReminder": "Reminder",
+  "statusEnRoute": "Provider on the way",
+  "statusInProgress": "Work in progress",
+  "statusCompleted": "Service completed",
+  "rateService": "Rate this service"
+}

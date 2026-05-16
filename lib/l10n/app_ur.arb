@@ -1,0 +1,23 @@
+{
+  "@@locale": "ur",
+  "appTitle": "ذمہ AI",
+  "requestScreenTitle": "آپ کو کیا سروس چاہیے؟",
+  "requestHint": "اپنی ضرورت بیان کریں...",
+  "requestExampleUrdu": "مجھے کل صبح G-13 میں AC ٹیکنیشن چاہیے",
+  "requestExampleRomanUrdu": "Mujhe kal subah G-13 mein AC technician chahiye",
+  "requestExampleEnglish": "I need a plumber in F-8 tomorrow morning",
+  "send": "بھیجیں",
+  "traceTitle": "AI سوچ رہا ہے...",
+  "traceComplete": "تجزیہ مکمل",
+  "recommendationTitle": "آپ کے لیے تجویز",
+  "whyThisOne": "یہ کیوں؟",
+  "bookNow": "ابھی بک کریں",
+  "bookingConfirmed": "بکنگ کنفرم!",
+  "viewReceipt": "رسید دیکھیں",
+  "followUpTitle": "سروس کی صورتحال",
+  "statusReminder": "یاد دہانی",
+  "statusEnRoute": "فراہم کنندہ آ رہے ہیں",
+  "statusInProgress": "کام جاری ہے",
+  "statusCompleted": "سروس مکمل",
+  "rateService": "سروس کی درجہ بندی کریں"
+}
