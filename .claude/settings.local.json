@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python -m pip install --quiet pypdf 2>&1 | Select-Object -Last 1; python -c \"from pypdf import PdfReader; r=PdfReader\\('D:/google_hackathon/Google Antigravity Hackathon - Challenges.pdf'\\); print\\('PAGES',len\\(r.pages\\)\\); [print\\(f'===== PAGE {i+1} =====\\\\n'+\\(p.extract_text\\(\\) or ''\\)\\) for i,p in enumerate\\(r.pages\\)]\" 2>&1)"
+    ]
+  }
+}

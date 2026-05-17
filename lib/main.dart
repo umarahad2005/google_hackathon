@@ -1,4 +1,4 @@
-// Zimma AI — Main Application Entry Point
+-// Zimma AI — Main Application Entry Point
 //
 // Agentic AI Service Orchestrator for the Informal Economy
 // Challenge 2 — Google Antigravity Hackathon
