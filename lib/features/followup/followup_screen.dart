@@ -1,9 +1,13 @@
 /// Zimma AI — Follow-Up Status Screen (Screen 5)
 ///
-/// Live follow-up lifecycle. Polling lives in [followupControllerProvider];
-/// this screen just watches [FollowupState] and paints it.
+/// Live follow-up lifecycle. Polling lives in [followupControllerProvider].
+/// On top of the timeline, the steps are surfaced as realistic, one-at-a-
+/// time notification popups: every ~20s the next step alerts and the user
+/// must acknowledge ("Got it") before the next one fires.
 
 library;
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +18,10 @@ import '../../core/ui/ui.dart';
 import '../../data/models/models.dart';
 import '../../providers/providers.dart';
 
-class FollowUpScreen extends ConsumerWidget {
+/// Seconds between each step's notification popup.
+const _stepInterval = Duration(seconds: 20);
+
+class FollowUpScreen extends ConsumerStatefulWidget {
   final String requestId;
   final String bookingId;
   final String providerName;
@@ -26,6 +33,11 @@ class FollowUpScreen extends ConsumerWidget {
     required this.providerName,
   });
 
+  @override
+  ConsumerState<FollowUpScreen> createState() => _FollowUpScreenState();
+}
+
+class _FollowUpScreenState extends ConsumerState<FollowUpScreen> {
   static const Map<String, IconData> _kindIcons = {
     'reminder': Icons.alarm_rounded,
     'status': Icons.local_shipping_rounded,
@@ -35,7 +47,7 @@ class FollowUpScreen extends ConsumerWidget {
 
   static const Map<String, Color> _kindColors = {
     'reminder': ZimmaTheme.warning,
-    'status': Color(0xFF6FB7E8),
+    'status': Color(0xFF3FA9F5),
     'completion': ZimmaTheme.success,
     'rating_request': ZimmaTheme.accent,
   };
@@ -47,10 +59,127 @@ class FollowUpScreen extends ConsumerWidget {
     'rating_request': '⭐ Rate Service | درجہ بندی',
   };
 
+  bool _narrativeStarted = false;
+  bool _running = false;
+  int _shownCount = 0;
+
+  Future<void> _runNarrative(List<FollowUp> followups) async {
+    if (_running) return;
+    _running = true;
+    for (var i = 0; i < followups.length; i++) {
+      await Future<void>.delayed(_stepInterval);
+      if (!mounted) return;
+      await _showStepDialog(followups[i], i + 1, followups.length);
+      if (!mounted) return;
+      setState(() => _shownCount = i + 1);
+    }
+  }
+
+  Future<void> _showStepDialog(FollowUp fu, int step, int total) {
+    final color = _kindColors[fu.kind] ?? ZimmaTheme.primary;
+    final icon = _kindIcons[fu.kind] ?? Icons.notifications_rounded;
+    final title = _kindLabels[fu.kind] ?? fu.kind;
+    final isRating = fu.kind == 'rating_request';
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // must press to continue ("enter")
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Container(
+          padding: const EdgeInsets.all(22),
+          decoration: ZimmaTheme.raised(radius: ZimmaTheme.radiusLg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color.withValues(alpha: 0.16),
+                  boxShadow: ZimmaTheme.glow(color, strength: 0.3),
+                ),
+                child: Icon(icon, color: color, size: 30),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: ZimmaTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Step $step of $total · ${widget.providerName}',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: ZimmaTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              if (fu.message.isNotEmpty)
+                Text(
+                  fu.message,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    height: 1.55,
+                    color: ZimmaTheme.textSecondary,
+                  ),
+                ),
+              const SizedBox(height: 20),
+              Pressable(
+                onTap: () => Navigator.of(ctx).pop(),
+                child: Container(
+                  width: double.infinity,
+                  height: 50,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: ZimmaTheme.primaryGradient,
+                    borderRadius:
+                        BorderRadius.circular(ZimmaTheme.radiusMd),
+                    boxShadow:
+                        ZimmaTheme.glow(ZimmaTheme.primary, strength: 0.35),
+                  ),
+                  child: Text(
+                    isRating ? 'Rate & finish' : 'Got it, continue',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final fs = ref.watch(followupControllerProvider(requestId));
+  Widget build(BuildContext context) {
+    final fs = ref.watch(followupControllerProvider(widget.requestId));
     final followups = fs.followups;
+
+    // Kick off the one-at-a-time notification narrative once the
+    // follow-up plan is available.
+    if (!_narrativeStarted && followups.isNotEmpty) {
+      _narrativeStarted = true;
+      final snapshot = List<FollowUp>.from(followups);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _runNarrative(snapshot);
+      });
+    }
 
     return Scaffold(
       body: AmbientBackground(
@@ -137,7 +266,7 @@ class FollowUpScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  providerName,
+                  widget.providerName,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -145,7 +274,9 @@ class FollowUpScreen extends ConsumerWidget {
                   ),
                 ),
                 Text(
-                  isComplete ? '✅ Service Complete' : '⏳ In Progress…',
+                  isComplete
+                      ? '✅ Service Complete'
+                      : '⏳ In Progress · step $_shownCount',
                   style: GoogleFonts.inter(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
@@ -183,9 +314,9 @@ class FollowUpScreen extends ConsumerWidget {
 
   Widget _timelineRow(List<FollowUp> followups, int index) {
     final fu = followups[index];
-    final isDone = fu.isDone;
-    final isActive =
-        !isDone && index == followups.indexWhere((f) => !f.isDone);
+    // A step is "done" in the UI once its popup has been acknowledged.
+    final isDone = index < _shownCount;
+    final isActive = index == _shownCount && _shownCount < followups.length;
 
     final color = _kindColors[fu.kind] ?? ZimmaTheme.primary;
     final icon = _kindIcons[fu.kind] ?? Icons.circle;
@@ -209,7 +340,7 @@ class FollowUpScreen extends ConsumerWidget {
                           ? color.withValues(alpha: 0.2)
                           : isActive
                               ? color.withValues(alpha: 0.28)
-                              : Colors.white.withValues(alpha: 0.05),
+                              : ZimmaTheme.surfaceLight,
                       borderRadius: BorderRadius.circular(11),
                       border: Border.all(
                         color: isDone || isActive
@@ -236,7 +367,8 @@ class FollowUpScreen extends ConsumerWidget {
                         margin: const EdgeInsets.symmetric(vertical: 4),
                         color: isDone
                             ? color.withValues(alpha: 0.3)
-                            : Colors.white.withValues(alpha: 0.06),
+                            : ZimmaTheme.textSecondary
+                                .withValues(alpha: 0.12),
                       ),
                     ),
                 ],
@@ -275,11 +407,15 @@ class FollowUpScreen extends ConsumerWidget {
                           decoration: BoxDecoration(
                             color: isDone
                                 ? color.withValues(alpha: 0.16)
-                                : Colors.white.withValues(alpha: 0.06),
+                                : ZimmaTheme.surfaceLight,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            isDone ? '✓ Done' : fu.status,
+                            isDone
+                                ? '✓ Done'
+                                : isActive
+                                    ? 'Now'
+                                    : 'Pending',
                             style: GoogleFonts.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,

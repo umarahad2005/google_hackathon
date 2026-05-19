@@ -36,9 +36,10 @@ class TraceState {
       );
 }
 
-class TraceController extends AutoDisposeFamilyNotifier<TraceState, String> {
+class TraceController extends FamilyNotifier<TraceState, String> {
   StreamSubscription<TraceEvent>? _sub;
   bool _polling = false;
+  bool _started = false;
 
   @override
   TraceState build(String requestId) {
@@ -50,6 +51,12 @@ class TraceController extends AutoDisposeFamilyNotifier<TraceState, String> {
   }
 
   void _start(String requestId) {
+    // This provider is NOT autoDispose: leaving the trace/status screen and
+    // coming back must resume the same timeline, not restart the pipeline.
+    // build() only runs once per request for the app session, but guard
+    // anyway so a stray re-entry never re-streams a finished request.
+    if (_started || state.isComplete) return;
+    _started = true;
     final repo = ref.read(zimmaRepositoryProvider);
 
     _sub = repo.traceStream(requestId).listen(
@@ -97,5 +104,10 @@ class TraceController extends AutoDisposeFamilyNotifier<TraceState, String> {
   }
 }
 
-final traceControllerProvider = NotifierProvider.autoDispose
-    .family<TraceController, TraceState, String>(TraceController.new);
+/// Deliberately NOT autoDispose: the live trace + final result are cached
+/// per requestId for the whole app session, so navigating back from the
+/// service-status screen (or reopening from History) resumes exactly where
+/// the user left off instead of replaying the agent pipeline.
+final traceControllerProvider =
+    NotifierProvider.family<TraceController, TraceState, String>(
+        TraceController.new);
