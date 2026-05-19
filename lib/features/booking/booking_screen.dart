@@ -125,40 +125,104 @@ class BookingScreen extends StatelessWidget {
   }
 
   Widget _receiptCard() {
-    return DepthCard(
-      level: 3,
-      borderColor: ZimmaTheme.success.withValues(alpha: 0.22),
+    return Container(
+      decoration: BoxDecoration(
+        color: ZimmaTheme.bgDeep,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: ZimmaTheme.success.withValues(alpha: 0.22)),
+        boxShadow: [
+          BoxShadow(
+            color: ZimmaTheme.success.withValues(alpha: 0.1),
+            blurRadius: 20,
+            spreadRadius: -5,
+          )
+        ],
+      ),
       child: Column(
         children: [
-          _DetailRow(
-            icon: Icons.person_rounded,
-            label: 'Provider',
-            value: providerName,
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: ZimmaTheme.bgSurface,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+            ),
+            child: Column(
+              children: [
+                _DetailRow(
+                  icon: Icons.person_rounded,
+                  label: 'Provider',
+                  value: providerName,
+                ),
+                const SizedBox(height: 16),
+                _DetailRow(
+                  icon: Icons.access_time_rounded,
+                  label: 'Time',
+                  value: _formatTime(booking.slotStart),
+                ),
+                const SizedBox(height: 16),
+                _DetailRow(
+                  icon: Icons.monetization_on_rounded,
+                  label: 'Estimate',
+                  value: booking.priceEstimate ?? 'N/A',
+                ),
+                const SizedBox(height: 16),
+                _DetailRow(
+                  icon: Icons.verified_rounded,
+                  label: 'Status',
+                  value: booking.status.toUpperCase(),
+                  valueColor: ZimmaTheme.success,
+                ),
+              ],
+            ),
           ),
-          const Divider(color: Colors.white10, height: 24),
-          _DetailRow(
-            icon: Icons.access_time_rounded,
-            label: 'Time',
-            value: _formatTime(booking.slotStart),
+          // Dashed separator
+          Row(
+            children: List.generate(
+              30,
+              (index) => Expanded(
+                child: Container(
+                  height: 2,
+                  color: index.isEven ? ZimmaTheme.textSecondary.withValues(alpha: 0.3) : Colors.transparent,
+                ),
+              ),
+            ),
           ),
-          const Divider(color: Colors.white10, height: 24),
-          _DetailRow(
-            icon: Icons.monetization_on_rounded,
-            label: 'Estimate',
-            value: booking.priceEstimate ?? 'N/A',
-          ),
-          const Divider(color: Colors.white10, height: 24),
-          _DetailRow(
-            icon: Icons.receipt_rounded,
-            label: 'Booking ID',
-            value: booking.shortCode,
-          ),
-          const Divider(color: Colors.white10, height: 24),
-          _DetailRow(
-            icon: Icons.verified_rounded,
-            label: 'Status',
-            value: booking.status.toUpperCase(),
-            valueColor: ZimmaTheme.success,
+          // Barcode Section
+          Container(
+            padding: const EdgeInsets.all(20),
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(15)),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.qr_code_2_rounded,
+                  size: 64,
+                  color: ZimmaTheme.textPrimary.withValues(alpha: 0.8),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  booking.shortCode ?? booking.bookingId.substring(0, 8).toUpperCase(),
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 16,
+                    letterSpacing: 4,
+                    fontWeight: FontWeight.w800,
+                    color: ZimmaTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'DIGITAL RECEIPT',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    letterSpacing: 2,
+                    fontWeight: FontWeight.w600,
+                    color: ZimmaTheme.success,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

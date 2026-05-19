@@ -452,31 +452,43 @@ class _TraceEventCardState extends State<_TraceEventCard>
                           ),
                         ],
                         if (e.toolCalls.isNotEmpty) ...[
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 12),
                           ...e.toolCalls.take(3).map((tc) {
+                            String icon = '🛠️';
+                            if (tc.name?.contains('find_') ?? false) icon = '🗺️';
+                            if (tc.name?.contains('reserve_') ?? false) icon = '🗄️';
+                            if (tc.name?.contains('send_') ?? false) icon = '💬';
+
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.build_rounded,
-                                      size: 10,
-                                      color: agentColor
-                                          .withValues(alpha: 0.7)),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      tc.display,
-                                      style: GoogleFonts.jetBrainsMono(
-                                        fontSize: 10,
-                                        color: ZimmaTheme.textSecondary
-                                            .withValues(alpha: 0.75),
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: ZimmaTheme.primary.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: ZimmaTheme.primary.withValues(alpha: 0.3)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(icon, style: const TextStyle(fontSize: 12)),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        'TOOL CALLED: ${tc.name}',
+                                        style: GoogleFonts.jetBrainsMono(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: ZimmaTheme.primary,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
+                              ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+                               .shimmer(duration: 1500.ms, color: ZimmaTheme.primary.withValues(alpha: 0.3)),
                             );
                           }),
                         ],
