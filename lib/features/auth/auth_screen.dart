@@ -235,10 +235,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     try {
       await ref.read(supabaseClientProvider).auth.signInWithOAuth(
             OAuthProvider.google,
-            // Web uses Supabase's configured Site URL; native uses the
-            // app's deep-link scheme.
-            redirectTo:
-                kIsWeb ? null : 'io.supabase.zimma://login-callback/',
+            // Web: return to the ORIGIN the app is actually served from
+            // (localhost:<port> in dev, the Vercel domain in prod). Passing
+            // null made Supabase fall back to its dashboard Site URL
+            // (default http://localhost:3000), which broke the callback on
+            // any other host/port. Native: the app's deep-link scheme.
+            redirectTo: kIsWeb
+                ? Uri.base.origin
+                : 'io.supabase.zimma://login-callback/',
           );
       // On success Supabase emits an auth change → AuthGate swaps in.
     } catch (e) {
