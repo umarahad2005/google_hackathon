@@ -452,43 +452,31 @@ class _TraceEventCardState extends State<_TraceEventCard>
                           ),
                         ],
                         if (e.toolCalls.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          ...e.toolCalls.take(3).map((tc) {
-                            String icon = '🛠️';
-                            if (tc.name?.contains('find_') ?? false) icon = '🗺️';
-                            if (tc.name?.contains('reserve_') ?? false) icon = '🗄️';
-                            if (tc.name?.contains('send_') ?? false) icon = '💬';
-
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: e.toolCalls
+                                .take(4)
+                                .map((tc) => _ToolBadge(tool: tc))
+                                .toList(),
+                          ),
+                          ...e.toolCalls.take(4).where((tc) {
+                            final r = tc.result;
+                            return r != null && r.trim().isNotEmpty;
+                          }).map((tc) {
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: ZimmaTheme.primary.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: ZimmaTheme.primary.withValues(alpha: 0.3)),
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                '↳ ${tc.result}',
+                                style: GoogleFonts.jetBrainsMono(
+                                  fontSize: 9.5,
+                                  color: ZimmaTheme.textSecondary
+                                      .withValues(alpha: 0.7),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(icon, style: const TextStyle(fontSize: 12)),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        'TOOL CALLED: ${tc.name}',
-                                        style: GoogleFonts.jetBrainsMono(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                          color: ZimmaTheme.primary,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-                               .shimmer(duration: 1500.ms, color: ZimmaTheme.primary.withValues(alpha: 0.3)),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             );
                           }),
                         ],
@@ -573,6 +561,129 @@ class _TimelineNodeState extends State<_TimelineNode>
       },
     );
   }
+}
+
+/// A bright, pulsing pill that makes external tool/orchestration calls
+/// unmissable in the trace — the visual proof of Antigravity tool use.
+class _ToolBadge extends StatelessWidget {
+  final ToolCall tool;
+  const _ToolBadge({required this.tool});
+
+  /// Map a tool name to (emoji, icon, color, channel label).
+  static _ToolKind _classify(String? name) {
+    final n = (name ?? '').toLowerCase();
+    if (n.contains('map') ||
+        n.contains('geocod') ||
+        n.contains('candidate') ||
+        n.contains('discover') ||
+        n.contains('place') ||
+        n.contains('distance')) {
+      return const _ToolKind(
+          '🗺️', Icons.map_rounded, Color(0xFF14B5F0), 'Google Maps');
+    }
+    if (n.contains('slot') ||
+        n.contains('avail') ||
+        n.contains('reserve') ||
+        n.contains('book') ||
+        n.contains('persist') ||
+        n.contains('schedule') ||
+        n.contains('supabase') ||
+        n.contains('db')) {
+      return const _ToolKind(
+          '🗄️', Icons.storage_rounded, Color(0xFF15B877), 'Supabase DB');
+    }
+    if (n.contains('confirm') ||
+        n.contains('sms') ||
+        n.contains('whatsapp') ||
+        n.contains('notify') ||
+        n.contains('message') ||
+        n.contains('dial') ||
+        n.contains('call') ||
+        n.contains('ring')) {
+      return const _ToolKind(
+          '💬', Icons.sms_rounded, Color(0xFF8B7CF0), 'SMS / WhatsApp');
+    }
+    if (n.contains('gemini') ||
+        n.contains('llm') ||
+        n.contains('intent') ||
+        n.contains('reason') ||
+        n.contains('score') ||
+        n.contains('extract')) {
+      return const _ToolKind(
+          '🤖', Icons.auto_awesome, Color(0xFFEF9D2E), 'Gemini AI');
+    }
+    return const _ToolKind(
+        '🛠️', Icons.build_rounded, ZimmaTheme.primary, 'Tool');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final k = _classify(tool.name);
+    final name = (tool.name ?? 'tool').toUpperCase();
+
+    final pill = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: k.color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: k.color.withValues(alpha: 0.55)),
+        boxShadow: [
+          BoxShadow(
+            color: k.color.withValues(alpha: 0.28),
+            blurRadius: 8,
+            spreadRadius: 0.5,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(k.icon, size: 12, color: k.color),
+          const SizedBox(width: 5),
+          Text(
+            '${k.emoji} $name',
+            style: GoogleFonts.inter(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w800,
+              color: k.color,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            decoration: BoxDecoration(
+              color: k.color.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              k.channel,
+              style: GoogleFonts.inter(
+                fontSize: 8,
+                fontWeight: FontWeight.w700,
+                color: k.color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // Gentle, continuous pulse to draw the eye to tool usage.
+    return pill
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .scaleXY(begin: 1.0, end: 1.04, duration: 900.ms, curve: Curves.easeInOut)
+        .then()
+        .tint(color: k.color.withValues(alpha: 0.06), duration: 900.ms);
+  }
+}
+
+class _ToolKind {
+  final String emoji;
+  final IconData icon;
+  final Color color;
+  final String channel;
+  const _ToolKind(this.emoji, this.icon, this.color, this.channel);
 }
 
 class _Badge extends StatelessWidget {

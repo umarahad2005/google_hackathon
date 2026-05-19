@@ -1,6 +1,6 @@
 {
-    "name": "google_hackathon",
-    "short_name": "google_hackathon",
+    "name": "google_hack",
+    "short_name": "google_hack",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
