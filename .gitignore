@@ -43,23 +43,3 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-
-# ===== Python / Backend =====
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-venv/
-.venv/
-env/
-*.egg-info/
-dist/
-build/
-
-# ===== Secrets — NEVER commit =====
-.env
-.env.local
-.env.production
-
-# ===== Supabase =====
-supabase/.temp/
