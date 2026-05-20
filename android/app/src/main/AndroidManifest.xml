@@ -1,4 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for the release APK. Flutter only injects INTERNET into the
+         debug/profile manifests, so without this the release build cannot do
+         DNS / network calls (Supabase, backend) — "Failed host lookup". -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- Voice input on the Request screen (speech_to_text plugin). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+
     <application
         android:label="google_hack"
         android:name="${applicationName}"
@@ -50,6 +58,12 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Android 11+ package visibility: speech_to_text must be able to
+             see the on-device speech recognition service, else voice input
+             silently fails on a release build. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
         </intent>
     </queries>
 </manifest>

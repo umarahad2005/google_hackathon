@@ -1,314 +1,276 @@
-# 🧠 Zimma AI — Agentic AI Service Orchestrator
+# 🧠 Zimma AI — Agentic Service Orchestrator
 
 > **ذمہ** (Zimma) — *"I take charge of it."*
 >
-> An AI system that takes responsibility for connecting users in Pakistan's informal economy with service providers — from intent to booking to follow-up — through a transparent, traceable, multi-agent pipeline.
+> An AI system that takes responsibility for connecting users in Pakistan's
+> informal economy with service providers — from a spoken/typed request, to a
+> ranked recommendation, to a booking, to follow-up — through a transparent,
+> fully-traced multi-agent pipeline.
 
-[![Challenge](https://img.shields.io/badge/Challenge-2%20AI%20Service%20Orchestrator-blue)]()
-[![Gemini ADK](https://img.shields.io/badge/Gemini%20ADK-Multi--Agent-purple)]()
-[![Flutter](https://img.shields.io/badge/Flutter-Mobile-02569B)]()
-[![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688)]()
-[![Supabase](https://img.shields.io/badge/Supabase-PostGIS-3ECF8E)]()
-
----
-
-## 🎯 What It Does
-
-Zimma AI is an **agentic service orchestrator** for Pakistan's informal economy. A user speaks or types a request in **Urdu, Roman Urdu, or English** — and the AI autonomously:
-
-1. **Understands** the intent (multilingual NLU)
-2. **Discovers** nearby providers (Google Maps + PostGIS)
-3. **Ranks** them with transparent, cited reasoning
-4. **Books** the best match (real state change in database)
-5. **Follows up** with reminders, status updates, and completion confirmation
-
-Every step is **fully traced** — the user watches the AI think in real-time through a live timeline.
+[![Flutter](https://img.shields.io/badge/Client-Flutter-02569B)]()
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688)]()
+[![Gemini](https://img.shields.io/badge/LLM-Gemini%202.5%20(Vertex)-purple)]()
+[![Supabase](https://img.shields.io/badge/Data-Supabase%20%2B%20PostGIS-3ECF8E)]()
+[![Maps](https://img.shields.io/badge/Geo-Google%20Maps%20Platform-EA4335)]()
 
 ---
 
-## 🏗 Architecture
+## 1. Repository Layout (read this first)
+
+The project is **two repositories**:
+
+| Repo | Path | What it is |
+|------|------|-----------|
+| **Client** (this repo) | `D:\google_hack` | Flutter app (mobile + web). No backend code lives here. |
+| **Backend** | `D:\google_hackathon_backend` | FastAPI service: the agent pipeline, Maps/Supabase integration, SSE trace. |
+
+The `agents/` folder **in this repo is documentation only** — the original
+build-time agent specs, workflows, skills, and plans. The runtime agents live
+in the backend repo under `app/agents/`.
+
+> Deep design, the full agent pipeline, the state machine, and the
+> mock-vs-real matrix are in **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)**.
+> This README is the overview + how to run it.
+
+---
+
+## 2. What It Does
+
+A user speaks or types a request in **Urdu, Roman Urdu, English, or mixed**
+(e.g. *"Mujhe Mansoorah home Lahore mein electrician chahiye abhi"*). The AI
+then autonomously:
+
+1. **Understands** the intent — multilingual NLU (service type, location, time, urgency).
+2. **Discovers** nearby providers — Google Places + a seeded Supabase/PostGIS pool.
+3. **Ranks** them with deterministic scoring and LLM-written, number-cited reasoning.
+4. **Calls & books** the best match — a real state change persisted to the database.
+5. **Follows up** — reminder, en-route, in-progress, completed, rating request.
+
+Every step streams to the app **live** as a trace timeline — the user watches
+the AI think, including which external tools it called and why.
+
+---
+
+## 3. Architecture at a Glance
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Flutter Mobile App                     │
-│  ┌──────────┐ ┌──────────┐ ┌────────┐ ┌──────────────┐ │
-│  │ Request   │ │ Trace    │ │ Recom. │ │ Booking +    │ │
-│  │ Screen    │ │ Timeline │ │ Screen │ │ Follow-up    │ │
-│  └─────┬────┘ └────┬─────┘ └───┬────┘ └──────┬───────┘ │
-│        │           │           │              │          │
-│        └───────────┴───────────┴──────────────┘          │
-│                         │ HTTP + SSE                     │
-└─────────────────────────┼───────────────────────────────┘
-                          │
-┌─────────────────────────┼───────────────────────────────┐
-│              FastAPI Backend (Port 8000)                  │
-│                         │                                │
-│  ┌──────────────────────▼──────────────────────────────┐│
-│  │              🧠 ADK Orchestrator Agent               ││
-│  │         (Hub-and-Spoke State Machine Driver)         ││
-│  │                                                      ││
-│  │  ┌─────────┐ ┌──────────┐ ┌─────────┐ ┌─────────┐ ││
-│  │  │Intent/  │ │Provider  │ │Ranking &│ │Booking  │ ││
-│  │  │NLU Agent│ │Discovery │ │Decision │ │Agent    │ ││
-│  │  │(Flash)  │ │Agent     │ │(Pro)    │ │         │ ││
-│  │  └────┬────┘ └────┬─────┘ └────┬────┘ └────┬────┘ ││
-│  │       │           │            │            │       ││
-│  │  ┌────▼───────────▼────────────▼────────────▼────┐ ││
-│  │  │           Trace / Observer (Callbacks)         │ ││
-│  │  │     Every step → TraceEvent → Supabase         │ ││
-│  │  └────────────────────────────────────────────────┘ ││
-│  └─────────────────────────────────────────────────────┘│
-│                         │                                │
-│  ┌──────────────────────▼──────────────────────────────┐│
-│  │                   Services Layer                     ││
-│  │  ┌────────────┐  ┌──────────────┐                   ││
-│  │  │Google Maps  │  │Supabase      │                   ││
-│  │  │Places +     │  │PostGIS +     │                   ││
-│  │  │Geocoding +  │  │Auth +        │                   ││
-│  │  │Distance     │  │Realtime +    │                   ││
-│  │  │Matrix       │  │Storage       │                   ││
-│  │  └────────────┘  └──────────────┘                   ││
-│  └─────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────── Flutter App (mobile + web) ─────────────────────────┐
+│  Onboarding → Auth → Shell( Dashboard · New · History · Profile )            │
+│  Request → Trace (live SSE) → Recommendation → Booking → Follow-up           │
+│  State: Riverpod   ·   Transport: Dio (+ Supabase JWT)   ·   Auth: Supabase  │
+└───────────────────────────────────┬─────────────────────────────────────────┘
+                                     │  HTTPS  +  SSE (text/event-stream)
+                                     │  Authorization: Bearer <supabase jwt>
+┌────────────────────────────────────▼─────────────────────────────────────────┐
+│                      FastAPI Backend  (port 8000)                             │
+│                                                                               │
+│   Orchestrator  (hub-and-spoke state-machine driver)                          │
+│        │                                                                      │
+│        ├─ Intent/NLU Agent      (Gemini 2.5 Flash)                            │
+│        ├─ Provider Discovery    (Google Places + Supabase PostGIS merge)      │
+│        ├─ Ranking & Decision    (deterministic score + Gemini 2.5 Pro why)    │
+│        ├─ Vendor Agent          (simulated outbound call, deterministic)      │
+│        ├─ Booking Agent         (REAL Supabase row + simulated SMS/WhatsApp)  │
+│        └─ Follow-up Agent       (simulated notifications, compressed clock)   │
+│                                                                               │
+│   Trace Observer → every agent/tool call → `agent_traces` (gap-free seq)      │
+│                                                                               │
+│   Services:  Google Maps (Geocoding · Places · Distance Matrix)               │
+│              Supabase (Postgres + PostGIS + Realtime + Auth)                   │
+└───────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### ADK Hub-and-Spoke Topology
+**Topology:** hub-and-spoke. The Orchestrator owns the request context and the
+state machine; no sub-agent calls another — all routing is centralized. A
+cross-cutting Trace Observer wraps every agent and tool call.
 
-- **Root Agent**: Orchestrator owns the `RequestContext` and state machine
-- **Sub-Agents**: Intent/NLU, Discovery, Ranking, Booking, Follow-up
-- **Routing Rule**: No sub-agent calls another — all routing centralized
-- **Trace Observer**: Cross-cutting callbacks on every agent/tool execution
-
-### State Machine
+**State machine:**
 
 ```
-NEW → UNDERSTANDING → DISCOVERING → RANKING → RECOMMENDED → BOOKING → CONFIRMED → FOLLOW_UP_SCHEDULED → COMPLETED
-         ↓                                        ↓
-       CLARIFY                                   FAILED
-         ↓
-    NO_PROVIDER
+NEW → UNDERSTANDING → DISCOVERING → RANKING → RECOMMENDED
+    → BOOKING → CONFIRMED → FOLLOW_UP_SCHEDULED → COMPLETED
+        ↘ CLARIFY      ↘ NO_PROVIDER        ↘ FAILED
 ```
 
 ---
 
-## 📱 Screens
+## 4. Mock vs. Real — be honest about it
 
-| # | Screen | Purpose |
-|---|--------|---------|
-| 1 | **Request** | Multilingual text/voice input with example prompts |
-| 2 | **Trace Timeline** | Live SSE-streamed AI thinking with reasoning, tools, latency |
-| 3 | **Recommendation** | Provider card with score breakdown bars + LLM reasoning |
-| 4 | **Booking** | Bilingual confirmation + receipt + AI reasoning |
-| 5 | **Follow-up Status** | Live lifecycle: reminder → en_route → completed → rating |
+| Capability | Status | How it's decided |
+|---|---|---|
+| **Gemini LLM** (intent, ranking reasoning) | **REAL** | Vertex AI, project `zimmaai` / `us-central1`, service-account auth. Falls back through a model chain on rate-limit. |
+| **Google Maps Geocoding / Places / Distance Matrix** | **REAL** | Used when `GOOGLE_MAPS_API_KEY` is set and valid. |
+| **Offline sector gazetteer** | **FALLBACK (degraded)** | Hard-coded Islamabad/Rawalpindi sector coords used only if Maps is absent/fails. The step is flagged `degraded:true`. |
+| **Supabase Postgres + PostGIS** | **REAL** | Service requests, bookings, follow-ups, traces, providers, availability are all persisted. The booking is a genuine DB state change. |
+| **Supabase Auth (JWT)** | **REAL** | Client signs in (email/pass or Google); backend verifies the bearer token. |
+| **Vendor outbound phone call** | **SIMULATED** | Always simulated, but deterministic (no RNG) and traced as a real two-sided decision. Flagged `simulated:true`. |
+| **SMS / WhatsApp confirmation** | **SIMULATED** | Bilingual message is drafted and persisted; send is flagged `simulated:true`. |
+| **Follow-up notifications** | **SIMULATED** | Reminder/status/rating events are real DB+trace state changes; the *send* is simulated. Timeline compressed by a demo-clock multiplier. |
 
----
-
-## 🛠 Tech Stack
-
-| Layer | Technology | Role |
-|-------|-----------|------|
-| Mobile | **Flutter** (Dart) | 5-screen app with Riverpod state |
-| Backend | **FastAPI** (Python) | REST + SSE, background ADK pipeline |
-| AI/LLM | **Gemini ADK** | Multi-agent orchestration |
-| Models | `gemini-2.0-flash` / `gemini-2.5-pro` | Flash for routing, Pro for reasoning |
-| Geo | **Google Maps Platform** | Places, Geocoding, Distance Matrix |
-| Database | **Supabase** (Postgres + PostGIS) | Spatial queries, Realtime, Auth |
-| Trace | **Supabase Realtime + SSE** | Dual-channel live trace delivery |
+The trace makes this transparent: every event carries `degraded` and
+`simulated` flags and a non-empty `reasoning`. See the full table and the
+decision logic in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ---
 
-## 🚀 Quick Start
+## 5. The Flutter Client (this repo)
 
-### Prerequisites
-- Python 3.11+
-- Flutter SDK 3.11+
-- Supabase project (free tier)
-- Google Maps API key
-- Gemini API key
+### 5.1 Stack
 
-### 1. Clone & Setup
+| Concern | Choice |
+|---|---|
+| State management | `flutter_riverpod` |
+| HTTP transport | `dio` (typed `ZimmaApi`, bearer-injected) |
+| Auth | `supabase_flutter` (email/password + Google OAuth) |
+| Voice input | `speech_to_text` |
+| Localization | `flutter_localizations` + `intl` (en, ur) |
+| Motion / UI | `flutter_animate`, `google_fonts`, custom 3D/glass theme |
 
-```bash
-git clone <repo-url>
-cd google_hackathon
+### 5.2 Layout
+
+```
+lib/
+├── main.dart                  # Supabase.initialize → AuthGate
+├── core/
+│   ├── network/
+│   │   ├── dio_client.dart     # base URL + Supabase JWT interceptor
+│   │   └── api_exception.dart  # single typed error
+│   ├── supabase_config.dart    # URL / anon key (dart-define overridable)
+│   ├── theme.dart              # the "Salmon & Sage" dark design system
+│   └── ui/                     # reusable primitives (DepthCard, GlassPanel…)
+├── data/
+│   ├── models/                 # immutable models + JSON (ServiceRequest, …)
+│   ├── zimma_api.dart          # typed transport over the FastAPI backend
+│   └── zimma_repository.dart   # repository the providers consume
+├── providers/                  # Riverpod
+│   ├── auth_controller.dart
+│   ├── request_controller.dart
+│   ├── trace_controller.dart   # SSE + polling fallback (session-persistent)
+│   ├── followup_controller.dart
+│   ├── data_providers.dart
+│   └── core_providers.dart
+├── features/
+│   ├── onboarding/  splash/  auth/
+│   ├── shell/                  # 4-tab shell: Dashboard · New · History · Profile
+│   ├── request/                # multilingual text/voice input
+│   ├── trace/                  # HERO screen — live agent timeline
+│   ├── recommendation/         # provider card + score breakdown + reasoning
+│   ├── booking/                # confirmation + receipt card
+│   ├── followup/               # live lifecycle status
+│   ├── history/  settings/  dashboard/
+└── l10n/                       # en + ur
 ```
 
-### 2. Backend
+### 5.3 Backend endpoints the client uses
 
-```bash
-cd backend
-python -m venv venv
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
+| Method | Path | Used by |
+|---|---|---|
+| `POST` | `/api/requests` | Request screen — create request |
+| `GET` | `/api/requests/{id}/trace` | Trace screen — SSE stream of agent steps |
+| `GET` | `/api/requests/{id}` | Trace/polling fallback — final result |
+| `POST` | `/api/requests/{id}/confirm` | Recommendation — accept / pick alternative |
+| `GET` | `/api/bookings/{id}/receipt` | Booking screen — receipt |
+| `GET` | `/api/requests` | History tab |
+| `GET` / `PATCH` | `/api/profile` | Settings/Profile |
+| `GET` | `/health` | connectivity check |
 
-pip install -r requirements.txt
-```
+### 5.4 Live trace delivery (resilient by design)
 
-### 3. Environment Variables
+`trace_controller.dart` opens the SSE stream **and** runs a polling fallback
+in parallel, so a dropped stream never strands the screen. The provider is a
+**session-persistent** `NotifierProvider.family` (deliberately *not*
+autoDispose): leaving the status screen and coming back — or reopening from
+History — **resumes the existing timeline instead of restarting the pipeline**.
 
-```bash
-cp .env.example .env
-# Edit .env with your real API keys
-```
+---
 
-### 4. Database Setup
+## 6. Running It
 
-Run the SQL migrations in your Supabase SQL Editor:
-1. `infra/migrations/001_initial_schema.sql`
-2. `infra/migrations/002_rpc_functions.sql`
+### 6.1 Prerequisites
+- Flutter SDK (stable), Dart 3+
+- A running backend (the sibling repo, or the hosted default)
+- Supabase project (for auth) and its URL + anon key
+- For the backend: Python 3.11+, Google Maps key, Gemini/Vertex credentials, Supabase service key
 
-Then seed the database:
-```bash
-cd backend
-python -m scripts.seed
-```
-
-### 5. Run Backend
-
-```bash
-cd backend
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### 6. Run Flutter App
+### 6.2 Client — local
 
 ```bash
 flutter pub get
+
+# Point at a local backend (Android emulator uses 10.0.2.2 for host loopback):
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
+
+# Or just run against the hosted default backend:
 flutter run
 ```
 
-### 7. Headless Reference Run (Optional)
+Supabase URL/anon key have working defaults baked into `supabase_config.dart`;
+override with `--dart-define=SUPABASE_URL=… --dart-define=SUPABASE_ANON_KEY=…`
+if you use your own project.
+
+### 6.3 Client — web on Vercel
+
+`vercel.json` is committed. It:
+- builds Flutter web (clones stable Flutter at build time, `flutter build web --release`),
+- serves `build/web`,
+- rewrites all routes to `/index.html` (SPA — refreshes & OAuth return don't 404).
+
+**Required Supabase dashboard config** for OAuth to work off-localhost
+(Authentication → URL Configuration):
+
+1. **Site URL** → your production URL (e.g. `https://your-app.vercel.app`).
+2. **Redirect URLs** → add every origin you serve from:
+   - `https://your-app.vercel.app/**`
+   - `http://localhost:<dev-port>/**`
+   - preview pattern, e.g. `https://*-yourproject.vercel.app/**`
+3. Google Cloud OAuth client → ensure
+   `https://<your-project>.supabase.co/auth/v1/callback` is an authorized redirect URI.
+
+On web the client now sends `redirectTo: Uri.base.origin`, so OAuth returns to
+the origin it was actually served from (this fixed the old "callback bounces to
+:3000" bug — Supabase was falling back to its dashboard Site URL).
+
+### 6.4 Backend (sibling repo, summary)
 
 ```bash
-cd backend
-python -m scripts.run_reference
+cd ../google_hackathon_backend
+pip install -r requirements.txt
+cp .env.example .env          # fill Maps / Vertex / Supabase keys
+fastapi run main.py           # serves on :8000  (fastapi dev for reload)
 ```
+
+DB migrations and the provider seed script live in the backend repo. See its
+own README and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the agent
+internals, prompts, and config keys.
 
 ---
 
-## 🔍 Traceability (25% + 20% of Score)
+## 7. Multilingual & Location Handling
 
-Every agent and tool call emits a `TraceEvent` with:
-
-| Field | Rule |
-|-------|------|
-| `reasoning` | **Never empty** — explains *why*, not just *what* |
-| `seq` | Gap-free, strictly increasing per request |
-| `tool_calls` | Every external effect recorded |
-| `degraded` | `true` if a fallback was used |
-| `simulated` | `true` if external send was simulated |
-| `latency_ms` | Wall-clock time of the step |
-
-### Trace Invariants (enforced by QA)
-
-1. Every state-machine transition has ≥1 trace event
-2. No trace event has empty `reasoning`
-3. `seq` is gap-free per `request_id`
-4. Each external effect has a `tool_call` entry
-5. Reading by `seq` reconstructs the full decision story
-
----
-
-## 📁 Project Structure
-
-```
-google_hackathon/
-├── agents/                  # Build-time org + runtime specs
-│   ├── PROJECT_BRIEF.md
-│   ├── ORG_CHART.md
-│   ├── orchestration/       # Phase gates, state machine
-│   ├── subagents/           # Runtime agent specs
-│   ├── workflows/           # wf-01..wf-05
-│   ├── skills/              # Tech skill guides
-│   └── checklists/          # QA gates
-├── backend/
-│   ├── app/
-│   │   ├── main.py          # FastAPI app
-│   │   ├── models.py        # Frozen Pydantic schemas
-│   │   ├── settings.py      # pydantic-settings
-│   │   ├── agents/          # Gemini ADK sub-agents
-│   │   │   ├── orchestrator.py
-│   │   │   ├── intent_agent.py
-│   │   │   ├── discovery_agent.py
-│   │   │   ├── ranking_agent.py
-│   │   │   ├── booking_agent.py
-│   │   │   ├── followup_agent.py
-│   │   │   ├── trace_observer.py
-│   │   │   ├── config.py
-│   │   │   └── prompts/
-│   │   └── services/
-│   │       ├── supabase.py  # Data access layer
-│   │       └── maps.py      # Google Maps + PostGIS merge
-│   ├── scripts/
-│   │   ├── seed.py          # 100 synthetic providers
-│   │   └── run_reference.py # Headless reference run
-│   ├── tests/
-│   └── requirements.txt
-├── lib/                     # Flutter app
-│   ├── main.dart
-│   ├── core/
-│   │   ├── theme.dart       # Premium dark theme
-│   │   └── api_client.dart  # Dio + SSE client
-│   ├── features/
-│   │   ├── request/         # Screen 1
-│   │   ├── trace/           # Screen 2 (hero)
-│   │   ├── recommendation/  # Screen 3
-│   │   ├── booking/         # Screen 4
-│   │   └── followup/        # Screen 5
-│   └── l10n/                # en + ur ARB files
-├── infra/
-│   ├── adrs/                # 4 architecture decision records
-│   ├── contracts/           # API contract
-│   └── migrations/          # SQL migrations
-├── deliverables/
-├── .env.example
-├── pubspec.yaml
-└── README.md
-```
-
----
-
-## 🌐 Multilingual Support
-
-| Language | Example |
-|----------|---------|
+| Input style | Example |
+|---|---|
 | Roman Urdu | "Mujhe kal subah G-13 mein AC technician chahiye" |
 | Urdu script | "مجھے کل صبح G-13 میں AC ٹیکنیشن چاہیے" |
 | English | "I need a plumber in I-8 urgently" |
-| Mixed | "AC repair chahiye F-8 mein tomorrow" |
+| Mixed + other city | "Mansoorah home Lahore mein electrician chahiye abhi" |
 
-The Intent/NLU Agent handles spelling variants (chahiye/chahie/chaiye), time expressions (kal subah → tomorrow 09:00 PKT), and Islamabad sector resolution (50+ sectors in the gazetteer).
-
----
-
-## 📐 ADRs
-
-| # | Decision | Status |
-|---|----------|--------|
-| 001 | ADK Hub-and-Spoke Topology | Accepted |
-| 002 | Supabase + PostGIS for Geo, Realtime, Trace | Accepted |
-| 003 | Trace Event Schema Design | Accepted |
-| 004 | SSE + Supabase Realtime for Live Trace | Accepted |
-
-See `infra/adrs/` for full rationale.
+The Intent/NLU agent normalizes Roman-Urdu spelling variants and time phrases,
+and **preserves the city the user actually named**. Geocoding is **city-aware**:
+it no longer force-appends "Islamabad" to every query, biases results to
+Pakistan (`region=pk`), and skips the Islamabad-only gazetteer for other
+cities — so "Mansoorah home Lahore" resolves in Lahore, not Blue Area
+Islamabad. (See the recent-fixes note in `docs/ARCHITECTURE.md`.)
 
 ---
 
-## 🏆 Rubric Coverage
+## 8. Documentation Index
 
-| Criteria | Weight | Implementation |
-|----------|--------|---------------|
-| **Antigravity** | 25% | Full Gemini ADK pipeline, traces streamed via tool |
-| **Agentic Reasoning** | 20% | 6 sub-agents with non-empty reasoning, cited numbers |
-| **Action Simulation** | 15% | Real Supabase booking row + receipt + follow-ups |
-| **Innovation** | 15% | Multilingual NLU, sector gazetteer, demo clock compression |
-| **UX** | 15% | 5-screen Flutter app with live trace timeline |
-| **Presentation** | 10% | README + architecture map + demo script |
+| Doc | Contents |
+|---|---|
+| **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** | Full design: agent-by-agent breakdown, orchestrator state machine, trace contract, LLM/Vertex config, integration details, complete mock-vs-real matrix, recent fixes. |
+| `agents/` (this repo) | Original build-time specs, workflows, skills, plans (historical/reference). |
+| Backend repo `app/agents/prompts/` | The live system prompts (e.g. `intent.txt`). |
 
 ---
-
-## 📄 License
 
 Built for the Google Antigravity Hackathon 2026.

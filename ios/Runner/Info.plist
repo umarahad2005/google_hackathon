@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Voice input on the Request screen (speech_to_text). iOS hard-crashes
+	     if these are missing when the mic / recognizer is first used. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Zimma uses the microphone so you can speak your service request instead of typing.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Zimma converts your spoken request into text to understand what service you need.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleURLTypes</key>
